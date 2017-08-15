@@ -1,11 +1,11 @@
       ******************************************************************
-      * Author: CESAR SANGABRIEL MARTINEZ
+      * Author:
       * Date:
       * Purpose:
       * Tectonics: cobc
       ******************************************************************
        IDENTIFICATION DIVISION.
-       PROGRAM-ID. Agenda.
+       PROGRAM-ID. AgendaV2.
 
        ENVIRONMENT DIVISION.
        CONFIGURATION SECTION.
@@ -13,7 +13,7 @@
        INPUT-OUTPUT SECTION.
        FILE-CONTROL.
            SELECT BASE ASSIGN
-           "C:/cobol/Programas/base.dat"
+           "C:\Users\rasec97\Desktop\AgendaCOBOL\base.dat"
            ORGANIZATION IS LINE SEQUENTIAL.
 
        DATA DIVISION.
@@ -26,7 +26,7 @@
 
        77  WS-SW                  PIC X VALUE SPACES.
        77  WS-CONTADOR            PIC 99 VALUE 11.
-
+      * 77  WS-INDICE              PIC 99.
        77  WS-PAUSAR-SC           PIC X VALUE SPACES.
 
        77  WS-OPCION              PIC X VALUE SPACES.
@@ -35,13 +35,23 @@
 
        01  WS-AREAS-A-USAR.
            05 WS-CONTACTO.
-
               10 WS-NOMBRE        PIC A(10).
               10 WS-APE-PATERNO   PIC A(12).
               10 WS-APE-MATERNO   PIC A(12).
               10 WS-NUM-CEL       PIC 9(10).
-              10 FILLER           PIC X(03).
+              10 FILLER           PIC X(03) VALUE SPACES.
               10 WS-CORREO        PIC A(40).
+
+       01  WS-TABLA OCCURS 99 TIMES
+           INDEXED BY WS-INDICE.
+
+           05 WS-TAB-NOMBRE       PIC A(10).
+           05 WS-TAB-APE-PATERNO  PIC A(12).
+           05 WS-TAB-APE-MATERNO  PIC A(12).
+           05 WS-TAB-NUM-CEL      PIC 9(10).
+           05 WS-TAB-FILLER       PIC X(03).
+           05 WS-TAB-CORREO       PIC A(40).
+
 
 
        SCREEN SECTION.
@@ -59,7 +69,7 @@
            05 LINE 06 COL 56 VALUE "3 SALIR ".
            05 LINE 07 COL 10 VALUE
            "__________________________________________________________".
-           05 LINE 23 COL 10 VALUE "OPCION ".
+           05 LINE 23 COL 10 VALUE "OPCION: ".
            05 LINE 25 COL 10 VALUE
            "__________________________________________________________".
            05 PIC X USING WS-OPCION LINE 23 COL 17.
@@ -85,7 +95,10 @@
 
        01  SS-PREG-CONTACTO
            FOREGROUND-COLOR IS 02 HIGHLIGHT.
-           05 LINE 21 COL 30 VALUE "�DESEA AGREGAR OTRO CONTACTO? S/N".           05 PIC X USING WS-OPCION LINE 21 COL 64.
+           05 LINE 21 COL 30 VALUE
+           "¿DESEA AGREGAR OTRO CONTACTO? S/N: ".
+           05 PIC X USING WS-OPCION LINE 21 COL 66.
+
 
        01  SS-IMPRIME-ARCHIVO
            FOREGROUND-COLOR IS 02 HIGHLIGHT.
@@ -109,9 +122,19 @@
        01  SS-LIMPIAR-PANTALLA.
            05 BLANK SCREEN.
 
+       01  SS-DUPLICADO
+           FOREGROUND-COLOR IS 02 HIGHLIGHT.
+           05 LINE 16 COL 35 VALUE "-------------------------------".
+           05 LINE 17 COL 35 VALUE "|                             |".
+           05 LINE 18 COL 35 VALUE "| CONTACTO DUPLICADO          |".
+           05 LINE 19 COL 35 VALUE "| DESEA ACTUALIZARLO?(S/N):   |".
+           05 LINE 20 COL 35 VALUE "|_____________________________|".
+           05 PIC X USING WS-OPCION LINE 19 COL 63 .
 
        PROCEDURE DIVISION.
        MAIN-PROCEDURE.
+
+      * SET WS-INDICE TO 0.
 
        100-MUESTRA-PANTALLA-INICIAL.
            DISPLAY SS-LIMPIAR-PANTALLA
@@ -123,13 +146,20 @@
 
            120-LEER-ARCHIVO.
 
-               PERFORM UNTIL WS-SW = 'Y'
-                   ADD 1 TO WS-CONTADOR
-                   READ BASE INTO WS-CONTACTO
-                   AT END MOVE 'Y' TO WS-SW
-                   NOT AT END DISPLAY WS-CONTACTO LINE WS-CONTADOR COL 3
-                   END-READ
-               END-PERFORM.
+           PERFORM UNTIL WS-SW = 'Y'
+               ADD 1 TO WS-CONTADOR
+               READ BASE INTO WS-TABLA(WS-CONTADOR)
+
+               AT END MOVE 'Y' TO WS-SW
+               NOT AT END DISPLAY WS-TABLA(WS-CONTADOR) LINE WS-CONTADOR
+               COL 3
+               MOVE WS-NOMBRE      TO WS-TAB-NOMBRE (WS-CONTADOR)
+               MOVE WS-APE-PATERNO TO WS-TAB-APE-PATERNO (WS-CONTADOR)
+               MOVE WS-APE-MATERNO TO WS-TAB-APE-MATERNO (WS-CONTADOR)
+               MOVE WS-NUM-CEL     TO WS-TAB-NUM-CEL (WS-CONTADOR)
+               MOVE WS-CORREO      TO WS-TAB-CORREO (WS-CONTADOR)
+               END-READ
+           END-PERFORM.
                MOVE ' ' TO WS-SW.
                MOVE 11 TO WS-CONTADOR.
 
@@ -162,24 +192,31 @@
 
        200-NUEVO-CONTACTO.
            DISPLAY SS-NUEVO-CONTACTO
-
-
            ACCEPT WS-NOMBRE         LINE 15 COL 50.
            ACCEPT WS-APE-PATERNO    LINE 16 COL 50.
            ACCEPT WS-APE-MATERNO    LINE 17 COL 50.
            ACCEPT WS-NUM-CEL        LINE 18 COL 50.
            ACCEPT WS-CORREO         LINE 19 COL 50.
+           PERFORM 600-BUSCAR-EN-TABLA THRU 600-FIN.
 
+
+
+      *implementar otro proceso para  borrar primer impresion de archivo
+      *y mostrar datos de tabla
 
        210-ABRIR-ARCHIVO.
            OPEN EXTEND BASE.
        210-FIN. EXIT.
        220-ESCRIBIR-ARCHIVO.
-           WRITE REG-CONTACTO FROM WS-CONTACTO.
+      *Al implementar con tablas marca error al escribir en archivo
+           WRITE REG-CONTACTO FROM WS-TABLA(WS-INDICE).
        220-FIN. EXIT.
        230-CERRA-ARCHIVO.
                CLOSE BASE.
        230-FIN. EXIT.
+
+
+
 
 
            DISPLAY SS-PREG-CONTACTO
@@ -204,3 +241,30 @@
        400-SALIR.
            DISPLAY " ".
        400-FIN. EXIT.
+
+       500-CONTACTO-DUPLICADO.
+           DISPLAY SS-DUPLICADO.
+           ACCEPT SS-DUPLICADO.
+              IF WS-OPCION = "S" OR "s"
+                  PERFORM 700-ACTUALIZAR-CONTACTO THRU 700-FIN.
+       500-FIN. EXIT.
+
+       600-BUSCAR-EN-TABLA.
+           SET WS-INDICE TO 1
+           SEARCH WS-TABLA AT END PERFORM 210-ABRIR-ARCHIVO
+           THRU 200-FIN
+           WHEN WS-NOMBRE         = WS-TAB-NOMBRE(WS-INDICE) AND
+                WS-APE-PATERNO    = WS-TAB-APE-PATERNO(WS-INDICE) AND
+                WS-APE-MATERNO    = WS-TAB-APE-MATERNO(WS-INDICE)
+                PERFORM 500-CONTACTO-DUPLICADO THRU 500-FIN
+           END-SEARCH.
+       600-FIN. EXIT.
+
+       700-ACTUALIZAR-CONTACTO.
+           MOVE WS-NOMBRE TO WS-TAB-NOMBRE(WS-INDICE).
+           MOVE WS-APE-PATERNO TO WS-TAB-APE-PATERNO(WS-INDICE).
+           MOVE WS-APE-MATERNO TO WS-TAB-APE-MATERNO(WS-INDICE).
+           MOVE WS-NUM-CEL TO WS-TAB-NUM-CEL(WS-INDICE).
+           MOVE WS-CORREO TO WS-TAB-CORREO(WS-INDICE).
+           PERFORM 100-MUESTRA-PANTALLA-INICIAL THRU 100-FIN.
+       700-FIN. EXIT.
