@@ -31,6 +31,9 @@
 
        77  WS-OPCION              PIC X VALUE SPACES.
 
+       77  WS-VAR                 PIC 99.
+       77  WS-RW                  PIC 99.
+       77  WS-CONTADOR-RW         PIC 99.
 
 
        01  WS-AREAS-A-USAR.
@@ -70,7 +73,7 @@
            05 LINE 07 COL 10 VALUE
            "__________________________________________________________".
            05 LINE 23 COL 10 VALUE "OPCION: ".
-           05 LINE 25 COL 10 VALUE
+           05 LINE 24 COL 10 VALUE
            "__________________________________________________________".
            05 PIC X USING WS-OPCION LINE 23 COL 17.
 
@@ -148,16 +151,12 @@
 
            PERFORM UNTIL WS-SW = 'Y'
                ADD 1 TO WS-CONTADOR
-               READ BASE INTO WS-TABLA(WS-CONTADOR)
-
+               READ BASE INTO REG-CONTACTO
                AT END MOVE 'Y' TO WS-SW
-               NOT AT END DISPLAY WS-TABLA(WS-CONTADOR) LINE WS-CONTADOR
+               NOT AT END
+               MOVE REG-CONTACTO TO WS-TABLA(WS-CONTADOR)
+               DISPLAY WS-TABLA(WS-CONTADOR) LINE WS-CONTADOR
                COL 3
-               MOVE WS-NOMBRE      TO WS-TAB-NOMBRE (WS-CONTADOR)
-               MOVE WS-APE-PATERNO TO WS-TAB-APE-PATERNO (WS-CONTADOR)
-               MOVE WS-APE-MATERNO TO WS-TAB-APE-MATERNO (WS-CONTADOR)
-               MOVE WS-NUM-CEL     TO WS-TAB-NUM-CEL (WS-CONTADOR)
-               MOVE WS-CORREO      TO WS-TAB-CORREO (WS-CONTADOR)
                END-READ
            END-PERFORM.
                MOVE ' ' TO WS-SW.
@@ -198,6 +197,7 @@
            ACCEPT WS-NUM-CEL        LINE 18 COL 50.
            ACCEPT WS-CORREO         LINE 19 COL 50.
            PERFORM 600-BUSCAR-EN-TABLA THRU 600-FIN.
+      *     GO TO 600-BUSCAR-EN-TABLA.
 
 
 
@@ -207,10 +207,16 @@
        210-ABRIR-ARCHIVO.
            OPEN EXTEND BASE.
        210-FIN. EXIT.
+
        220-ESCRIBIR-ARCHIVO.
-      *Al implementar con tablas marca error al escribir en archivo
-           WRITE REG-CONTACTO FROM WS-TABLA(WS-INDICE).
+
+
+           WRITE REG-CONTACTO FROM WS-CONTACTO.
+
+
        220-FIN. EXIT.
+
+
        230-CERRA-ARCHIVO.
                CLOSE BASE.
        230-FIN. EXIT.
@@ -233,10 +239,21 @@
        200-FIN. EXIT.
 
        300-IMPRIME-ARCHIVO.
-           DISPLAY SS-IMPRIME-ARCHIVO
-           ACCEPT SS-IMPRIME-ARCHIVO.
+      *     DISPLAY SS-IMPRIME-ARCHIVO
+      *     ACCEPT SS-IMPRIME-ARCHIVO.
+           DISPLAY SS-LIMPIAR-PANTALLA
+           PERFORM UNTIL WS-VAR = 5
+           ADD 1 TO WS-VAR
+           DISPLAY WS-TABLA(WS-VAR) LINE WS-VAR COL 1
+
+           DISPLAY WS-TAB-NUM-CEL(1) LINE 20 COL 1
+           END-PERFORM.
 
        300-FIN. EXIT.
+
+
+
+
 
        400-SALIR.
            DISPLAY " ".
@@ -251,16 +268,17 @@
 
        600-BUSCAR-EN-TABLA.
            SET WS-INDICE TO 1
-           SEARCH WS-TABLA AT END PERFORM 210-ABRIR-ARCHIVO
+           SEARCH WS-TABLA AT END DISPLAY "No duplicado"
+          PERFORM 210-ABRIR-ARCHIVO
            THRU 200-FIN
-           WHEN WS-NOMBRE         = WS-TAB-NOMBRE(WS-INDICE) AND
-                WS-APE-PATERNO    = WS-TAB-APE-PATERNO(WS-INDICE) AND
-                WS-APE-MATERNO    = WS-TAB-APE-MATERNO(WS-INDICE)
-                PERFORM 500-CONTACTO-DUPLICADO THRU 500-FIN
+           WHEN  WS-TAB-NOMBRE(WS-INDICE) = WS-NOMBRE
+      *           DISPLAY "DUPLICADO"
+             PERFORM 500-CONTACTO-DUPLICADO THRU 500-FIN
            END-SEARCH.
        600-FIN. EXIT.
 
        700-ACTUALIZAR-CONTACTO.
+           DISPLAY "HOLA DESDE 700-ACTUALIZAR-CONTACTO" LINE 2 COL 2
            MOVE WS-NOMBRE TO WS-TAB-NOMBRE(WS-INDICE).
            MOVE WS-APE-PATERNO TO WS-TAB-APE-PATERNO(WS-INDICE).
            MOVE WS-APE-MATERNO TO WS-TAB-APE-MATERNO(WS-INDICE).
